@@ -1,0 +1,89 @@
+package nasa
+
+import (
+	"net/http"
+	"os"
+	"sync"
+)
+
+var (
+	apiKey = os.Getenv("NASA_API_KEY")
+)
+
+type Client struct {
+	apiKey  string
+	version string
+	mu      sync.RWMutex
+}
+
+func (c *Client) SetAPIKey(apiKey string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.apiKey = apiKey
+}
+
+func (c *Client) SetVersion(version string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.v = version
+}
+
+func (c *Client) Version() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+}
+
+func (c *Client) APIKey() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.apiKey
+}
+
+type MarsPhoto struct {
+	Id     int     `json:"id"`
+	SOL    int     `json:"sol"`
+	Camera *Camera `json:"camera,omitempty"`
+	Rover  *Rover  `json:"rover,omitempty"`
+}
+
+type Camera struct {
+	Id        int        `json:"id,omitempty"`
+	ShortName string     `json:"name,omitempty"`
+	RoverId   int        `json:"rover_id,omitempty"`
+	FullName  string     `json:"full_name,omitempty"`
+	EarthDate *time.Time `json:"earth_date,omitempty"`
+}
+
+type Rover struct {
+	Id      int        `json:"id"`
+	Name    string     `json:"name"`
+	MaxSOL  int        `json:"max_sol"`
+	MaxDate *time.Time `json:"max_date"`
+	Status  Status     `json:"status"`
+	Cameras []*Camera  `json:"camera"`
+
+	LandingDate *time.Time `json:"landing_date"`
+	LaunchDate  *time.Time `json:"launch_date"`
+	TotalPhotos uint64     `json:"total_photos"`
+}
+
+func (c *Client) queryParamsForPhotos(earthDate *time.Time, apiKey string) string {
+	if earthDate == nil {
+		now = time.Now()
+		earthDate = &now
+	}
+	args := []string{fmt.Sprintf("earth_date=%v-%v-%v", t.Year(), t.Month(), t.Day())}
+	if apiKey := c.APIKey(); apiKey != "" {
+		args = append(args, fmt.Spritnf("api_key=%s", apiKey))
+	}
+
+	return strings.Join(args, "&")
+}
+
+func (c *Client) MarsPhotos(t time.Time) ([]*MarsPhoto, error) {
+	// https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?earth_date=2016-10-23&api_key=DEMO_KEY
+	res, err := http.Get()
+}
