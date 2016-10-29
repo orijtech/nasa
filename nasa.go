@@ -110,11 +110,12 @@ func (ymd *YMDTime) UnmarshalJSON(b []byte) error {
 
 func (ymd YMDTime) String() string {
 	year, month, day := time.Time(ymd).Date()
-	return fmt.Sprintf("%d-%d-%d", year, month, day)
+	return fmt.Sprintf("%d-%02d-%02d", year, month, day)
 }
 
 func (ymd *YMDTime) MarshalJSON() ([]byte, error) {
-	return []byte(ymd.String()), nil
+	quoted := strconv.Quote(ymd.String())
+	return []byte(quoted), nil
 }
 
 type Camera struct {
@@ -129,9 +130,9 @@ type Rover struct {
 	Id      int       `json:"id"`
 	Name    string    `json:"name"`
 	MaxSOL  int       `json:"max_sol"`
-	MaxDate *YMDTime  `json:"max_date"`
+	MaxDate *YMDTime  `json:"max_date,omitempty"`
 	Status  Status    `json:"status"`
-	Cameras []*Camera `json:"camera"`
+	Cameras []*Camera `json:"camera,omitempty"`
 
 	LandingDate *YMDTime `json:"landing_date"`
 	LaunchDate  *YMDTime `json:"launch_date"`
@@ -238,11 +239,16 @@ func (c *Client) MarsPhotos(t *time.Time) (*MarsPhotos, error) {
 		return nil, err
 	}
 
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return nil, fmt.Errorf("%d %s", res.StatusCode, res.Status)
-	}
-
 	blob, err := ioutil.ReadAll(res.Body)
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		msg := string(blob)
+		if msg == "" {
+			msg = res.Status
+		}
+		re := &roverError{status: res.StatusCode}
+		re.UnmarshalJSON(blob)
+		return nil, re
+	}
 	_ = res.Body.Close()
 	if err != nil {
 		return nil, err
@@ -254,4 +260,33 @@ func (c *Client) MarsPhotos(t *time.Time) (*MarsPhotos, error) {
 	}
 
 	return marsPhotos, nil
+}
+
+type roverError struct {
+	body   map[string]interface{}
+	rawErr error
+	status int
+}
+
+func (re *roverError) Error() string {
+	if re == nil || re.rawErr == nil {
+		return ""
+	}
+	return re.rawErr.Error()
+}
+
+func (re *roverError) Status() int { return re.status }
+
+func (re *roverError) UnmarshalJSON(b []byte) error {
+	body := make(map[string]interface{})
+	if err := json.Unmarshal(b, &body); err != nil {
+		return err
+	}
+	re.body = body
+	re.rawErr = fmt.Errorf("%s", b)
+	return nil
+}
+
+func (re *roverError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(re.body)
 }
