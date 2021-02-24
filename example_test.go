@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/odeke-em/nasa"
+	"github.com/orijtech/nasa"
 )
 
 func Example_clientMarsPhotoTody() {

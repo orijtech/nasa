@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odeke-em/nasa"
+	"github.com/orijtech/nasa"
 )
 
 var roverClient *nasa.Client
@@ -142,5 +142,6 @@ func main() {
 		Addr: portFromEnv(),
 	}
 	if err := server.ListenAndServe(); err != nil {
+		panic(err)
 	}
 }
